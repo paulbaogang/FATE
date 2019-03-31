@@ -246,7 +246,7 @@ def stop_workflow(job_id):
     return get_json_result()
 
 
-@manager.route('/job/jobStatus/<job_id>', methods=['POST'])
+@manager.route('/v1/job/jobStatus/<job_id>', methods=['POST'])
 def update_job(job_id):
     request_data = request.json
     update_job_info(job_id=job_id, update_data={"status": request_data.get("status")})

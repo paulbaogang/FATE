@@ -28,13 +28,12 @@ public class StandaloneDTable implements DTable{
     private String dataDir = Configuration.getProperty("standaloneStoragePath");
     private Database db;
 
-    @Override
-    public void init(String name, String nameSpace, int partition) {
-        String path = Paths.get(this.dataDir, "LMDB", nameSpace, name, Integer.toString(partition)).toString();
+    public StandaloneDTable(String name, String namespace, int partition){
+        String path = Paths.get(this.dataDir, "LMDB", namespace, name, Integer.toString(0)).toString();
+        LOGGER.info(path);
         Env env = new Env(path);
         this.db = env.openDatabase();
     }
-
 
     @Override
     public byte[] get(String key){

@@ -21,8 +21,8 @@ import com.webank.ai.fate.api.serving.InferenceServiceGrpc;
 import com.webank.ai.fate.api.serving.InferenceServiceProto.InferenceRequest;
 import com.webank.ai.fate.api.serving.InferenceServiceProto.InferenceResponse;
 import com.webank.ai.fate.api.serving.InferenceServiceProto.FederatedMeta;
+import com.webank.ai.fate.api.serving.InferenceServiceProto.ModelInfo;
 import com.webank.ai.fate.core.result.ReturnResult;
-import com.webank.ai.fate.core.serdes.impl.GeneralJsonBytesSerDes;
 import com.webank.ai.fate.core.utils.Configuration;
 import com.webank.ai.fate.core.utils.ObjectTransform;
 import com.webank.ai.fate.serving.adapter.dataaccess.FeatureData;
@@ -49,10 +49,11 @@ public class PredictService extends InferenceServiceGrpc.InferenceServiceImplBas
         String myRole = FederatedUtils.getMyRole(requestMeta.getMyRole());
 
         // get model
-        MLModel model = ModelManager.getModel(requestMeta.getSceneId(), requestMeta.getPartnerPartyId(), myRole);
+        ModelInfo modelInfo = req.getModelsMap().get(Configuration.getProperty("partyId"));
+        MLModel model = ModelManager.getModel(modelInfo.getName(), modelInfo.getNamespace());
         if (model == null){
             response.setStatusCode(StatusCode.NOMODEL);
-            FederatedMeta.Builder federatedMetaBuilder = FederatedUtils.genResponseMetaBuilder(requestMeta, "");
+            FederatedMeta.Builder federatedMetaBuilder = FederatedUtils.genResponseMetaBuilder(requestMeta);
             response.setMeta(federatedMetaBuilder.build());
             responseObserver.onNext(response.build());
             responseObserver.onCompleted();
@@ -60,7 +61,7 @@ public class PredictService extends InferenceServiceGrpc.InferenceServiceImplBas
         }
 
 
-        FederatedMeta.Builder federatedMetaBuilder = FederatedUtils.genResponseMetaBuilder(requestMeta, (String)model.getModelInfo().get("commitId"));
+        FederatedMeta.Builder federatedMetaBuilder = FederatedUtils.genResponseMetaBuilder(requestMeta);
         // set response meta
         response.setMeta(federatedMetaBuilder.build());
         // deal data
@@ -76,9 +77,11 @@ public class PredictService extends InferenceServiceGrpc.InferenceServiceImplBas
         inputData.forEach((sid, f)->{
             Map<String, Object> predictInputData = (Map<String, Object>)f;
             Map<String, String> predictParams = new HashMap<>();
+            ModelInfo partnerModelInfo = req.getModelsMap().get(req.getMeta().getPartnerPartyId());
             predictParams.put("sceneId", requestMeta.getSceneId());
             predictParams.put("sid", sid);
-            predictParams.put("commitId", (String)model.getModelInfo().get("commitId"));
+            predictParams.put("partnerModelName", partnerModelInfo.getName());
+            predictParams.put("partnerModelNamespace", partnerModelInfo.getNamespace());
             Map<String, Object> modelResult = model.predict(predictInputData, predictParams);
             Map<String, Object> result = this.getProcessedResult(modelResult);
             response.setData(ByteString.copyFrom(ObjectTransform.bean2Json(result).getBytes()));
@@ -90,11 +93,16 @@ public class PredictService extends InferenceServiceGrpc.InferenceServiceImplBas
 
     public ReturnResult federatedPredict(Map<String, Object> requestData){
         ReturnResult returnResult = new ReturnResult();
+        /*
         String myPartyId = Configuration.getProperty("partyId");
         String partnerPartyId = requestData.get("myPartyId").toString();
         String myRole = FederatedUtils.getMyRole(requestData.get("myRole").toString());
-        // federated predict should get model according to commit id
-        MLModel model = ModelManager.getModel(requestData.get("sceneId").toString(), partnerPartyId, myRole, requestData.get("commitId").toString());
+        */
+        LOGGER.info(requestData);
+        String modelName = requestData.get("modelName").toString();
+        String modelNamespace = requestData.get("modelNamespace").toString();
+        MLModel model = ModelManager.getModel(modelName, modelNamespace);
+        LOGGER.info(model);
         if (model == null){
             returnResult.setStatusCode(StatusCode.NOMODEL);
             returnResult.setMessage("Can not found model.");
@@ -102,9 +110,6 @@ public class PredictService extends InferenceServiceGrpc.InferenceServiceImplBas
         }
         Map<String, Object> predictParams = new HashMap<>();
         predictParams.putAll(requestData);
-        predictParams.put("myPartyId", myPartyId);
-        predictParams.put("partnerPartyId", partnerPartyId);
-        predictParams.put("myRole", myRole);
         try{
             Map<String, Object> inputData = getFeatureData(requestData.get("sid").toString());
             if (inputData == null || inputData.size() < 1){

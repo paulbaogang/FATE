@@ -39,7 +39,7 @@ public class ModelCache {
                     @Override
                     public MLModel load(String modelKey) throws Exception {
                         String[] modelKeyFields = ModelUtils.splitModelKey(modelKey);
-                        return ModelUtils.loadModel(modelKeyFields[0], modelKeyFields[1], modelKeyFields[2], modelKeyFields[3], "", "");
+                        return ModelUtils.loadModel(modelKeyFields[0], modelKeyFields[1]);
                     }
                 });
     }
@@ -55,5 +55,9 @@ public class ModelCache {
 
     public void put(String modelKey, MLModel model){
         modelCache.put(modelKey, model);
+    }
+
+    public long getSize(){
+        return modelCache.size();
     }
 }

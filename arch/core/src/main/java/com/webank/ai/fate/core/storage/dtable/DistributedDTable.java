@@ -36,8 +36,7 @@ public class DistributedDTable implements DTable{
     private String nameSpace;
     private int partition;
 
-    @Override
-    public void init(String name, String nameSpace, int partition) {
+    public DistributedDTable(String name, String nameSpace, int partition){
         this.channel = ClientPool.getChannel(Configuration.getProperty("roll"));
         this.name = name;
         this.nameSpace = nameSpace;

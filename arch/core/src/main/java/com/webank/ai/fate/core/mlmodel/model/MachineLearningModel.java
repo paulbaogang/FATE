@@ -51,6 +51,8 @@ public abstract class MachineLearningModel<B, X, P> implements MLModel<B, X, P>{
         Packet.Builder packetBuilder = Packet.newBuilder();
         requestData.putAll(this.modelInfo);
         requestData.put("myPartyId", Configuration.getProperty("partyId"));
+        requestData.put("modelName", requestData.get("partnerModelName"));
+        requestData.put("modelNamespace", requestData.get("partnerModelNamespace"));
         packetBuilder.setBody(Proxy.Data.newBuilder()
                         .setValue(ByteString.copyFrom(ObjectTransform.bean2Json(requestData).getBytes()))
                         .build());

@@ -67,7 +67,6 @@ def save_version(name, namespace, version_log='', tag=None, branch=None):
         return True
     except Exception as e:
         LOGGER.exception(e)
-        traceback.print_exc()
         return False
     finally:
         delete_commit_tmp(commid_id=name, data_table_namespace=namespace)

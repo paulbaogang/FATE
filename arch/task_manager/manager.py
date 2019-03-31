@@ -8,13 +8,13 @@ from arch.api.utils.log_utils import LoggerFactory
 from arch.api.utils import file_utils
 from arch.api.utils.parameter_utils import ParameterOverride
 from arch.task_manager.adapter.offline_feature.get_feature import GetFeature
-from arch.task_manager.JobManage import save_job, query_job, update_job
+from arch.task_manager.job_manager import save_job_info, query_job_info, update_job_info
+from arch.task_manager.utils.job_utils import generate_job_id, get_job_directory
 from flask.logging import default_handler
 from flask import Flask, request, jsonify
 import grpc, time, sys
 from concurrent import futures
 import datetime
-import threading
 import os
 import subprocess
 import glob
@@ -22,26 +22,14 @@ import psutil
 from psutil import NoSuchProcess
 import traceback
 import uuid
+from arch.task_manager.settings import ROLE, SERVERS, IP, GRPC_PORT, HTTP_PORT, LOCAL_URL, PROXY_HOST, PROXY_PORT, \
+    PARTY_ID, WORK_MODE, HEADERS, _ONE_DAY_IN_SECONDS
 
 '''
 Initialize the manager
 '''
 
 manager = Flask(__name__)
-
-ROLE = 'manager'
-SERVERS = 'servers'
-
-server_conf = file_utils.load_json_conf("arch/conf/server_conf.json")
-
-'''
-Constants
-'''
-
-_ONE_DAY_IN_SECONDS = 60 * 60 * 24
-HEADERS = {
-    'Content-Type': 'application/json',
-}
 
 '''
 Url Configs
@@ -53,15 +41,6 @@ WORKFLOW_URL = '/workflow/<job_id>/<module>/<role>'
 
 def get_url(_suffix):
     return "{}{}".format(LOCAL_URL, _suffix)
-
-
-def generate_job_id():
-    return '_'.join([datetime.datetime.now().strftime("%Y%m%d_%H%M%S"), str(PARTY_ID), str(id_counter.incr())])
-
-
-def get_job_directory(job_id=None):
-    _paths = ['jobs', job_id] if job_id else ['jobs']
-    return os.path.join(file_utils.get_project_base_directory(), *_paths)
 
 
 def get_proxy_data_channel():
@@ -128,7 +107,7 @@ def download_data(data_func):
         return get_json_result(0, "success, job_id {}".format(_job_id)) 
     except:
         return get_json_result(-104, "failed, job_id {}".format(_job_id)) 
-        
+
 
 @manager.route('/job/<job_id>', methods=['DELETE'])
 def stop_job(job_id):
@@ -188,6 +167,7 @@ def submit_job():
                                                                                                    _url)
             manager.logger.exception(msg)
             return get_json_result(-101, 'UnaryCall submit to remote manager failed')
+    #save_job_info(job_id=_job_id, )
     return get_json_result(0, "success, job_id {}".format(_job_id))
 
 
@@ -211,14 +191,17 @@ def start_workflow(job_id, module, role):
     else:
         startupinfo = None
     task_pid_path = os.path.join(_job_dir, 'pids')
-    std_log = open(os.path.join(_job_dir, role + '.std.log'), 'w')
+    #std_log = open(os.path.join(_job_dir, role + '.std.log'), 'w')
+    # jarvis test
+    std_log = open(os.path.join("/Users/jarviszeng/Work/Project/FDN/FATE/jobs", role + '.std.log'), 'w')
 
     progs = ["python3",
              os.path.join(file_utils.get_project_base_directory(), _data['CodePath']),
              "-j", job_id,
              "-c", os.path.abspath(conf_file_path)
              ]
-    manager.logger.info('Starting progs: {}'.format(progs))
+    print(" ".join(progs))
+    manager.logger.info('Starting progs: {}'.format(" ".join(progs)))
 
     p = subprocess.Popen(progs,
                          stdout=std_log,
@@ -231,7 +214,7 @@ def start_workflow(job_id, module, role):
         f.write(str(p.pid) + "\n")
         f.flush()
 
-    return get_json_result()
+    return get_json_result(msg="success, pip is %d" % p.pid)
 
 
 @manager.route('/workflow/<job_id>', methods=['DELETE'])
@@ -249,7 +232,7 @@ def stop_workflow(job_id):
                         try:
                             if len(pid) == 0:
                                 continue
-                            manager.logger.debug("terminating process pid:{} {}", pid, pid_file)
+                            manager.logger.debug("terminating process pid:{} {}".format(pid, pid_file))
                             p = psutil.Process(int(pid))
                             for child in p.children(recursive=True):
                                 child.kill()
@@ -259,6 +242,16 @@ def stop_workflow(job_id):
             except Exception as e:
                 manager.logger.exception("error")
                 continue
+        update_job_info(job_id=job_id, update_data={"status": "failed", "set_status": "failed"})
+    return get_json_result()
+
+
+@manager.route('/job/jobStatus/<job_id>', methods=['POST'])
+def update_job(job_id):
+    request_data = request.json
+    update_job_info(job_id=job_id, update_data={"status": request_data.get("status")})
+    #if request_data.get("status") in ["failed", "deleted"]:
+
     return get_json_result()
 
 
@@ -310,7 +303,7 @@ def request_offline_feature():
             job_data["begin_date"] = datetime.datetime.now()
             job_data["status"] = "running"
             job_data["config"] = json.dumps(request_data)
-            save_job(job_id=job_id, **job_data)
+            save_job_info(job_id=job_id, **job_data)
             return get_json_result()
         else:
             return get_json_result(status=1, msg="request offline feature error: %s" % response.get("msg", ""))
@@ -328,12 +321,12 @@ def import_offline_feature():
         if not request_data.get("jobId"):
             return get_json_result(status=2, msg="no job id")
         job_id = request_data.get("jobId")
-        job_data = query_job(job_id=job_id)
+        job_data = query_job_info(job_id=job_id)
         if not job_data:
             return get_json_result(status=3, msg="can not found this job id: %s" % request_data.get("jobId", ""))
         response = GetFeature.import_data(request_data, json.loads(job_data[0]["config"]))
         if response.get("status", 1) == 0:
-            update_job(job_id=job_id, update_data={"status": "success", "end_date": datetime.datetime.now()})
+            update_job_info(job_id=job_id, update_data={"status": "success", "end_date": datetime.datetime.now()})
             return get_json_result()
         else:
             return get_json_result(status=1, msg="request offline feature error: %s" % response.get("msg", ""))
@@ -381,19 +374,6 @@ class UnaryServicer(proxy_pb2_grpc.DataTransferServiceServicer):
         return wrap_grpc_packet(resp_json, method, _suffix, dst.partyId, job_id)
 
 
-class IdCounter:
-    _lock = threading.RLock()
-
-    def __init__(self, initial_value=0):
-        self._value = initial_value
-
-    def incr(self, delta=1):
-        '''
-        Increment the counter with locking
-        '''
-        with IdCounter._lock:
-            self._value += delta
-            return self._value
 
 
 if __name__ == '__main__':
@@ -405,20 +385,10 @@ if __name__ == '__main__':
     manager.logger.setLevel(logging.DEBUG)
     manager.logger.addHandler(LoggerFactory.get_hanlder('manager'))
     print(manager.logger.handlers)
-    id_counter = IdCounter()
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=5),
                          options=[(cygrpc.ChannelArgKey.max_send_message_length, -1),
                                   (cygrpc.ChannelArgKey.max_receive_message_length, -1)])
-
-    IP = server_conf.get(SERVERS).get(ROLE).get('host')
-    GRPC_PORT = server_conf.get(SERVERS).get(ROLE).get('grpc.port')
-    HTTP_PORT = server_conf.get(SERVERS).get(ROLE).get('http.port')
-    LOCAL_URL = "http://{}:{}".format(IP, HTTP_PORT)
-    PROXY_HOST = server_conf.get(SERVERS).get('proxy').get('host')
-    PROXY_PORT = server_conf.get(SERVERS).get('proxy').get('port')
-    PARTY_ID = server_conf.get('party_id')
-    WORK_MODE = server_conf.get(SERVERS).get(ROLE).get('work_mode')
 
     proxy_pb2_grpc.add_DataTransferServiceServicer_to_server(UnaryServicer(), server)
     server.add_insecure_port("{}:{}".format(IP, GRPC_PORT))

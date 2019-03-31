@@ -50,7 +50,7 @@ class DataBaseModel(Model):
         super(DataBaseModel, self).save(*args, **kwargs)
 
 
-class Job(DataBaseModel):
+class JobInfo(DataBaseModel):
     job_id = CharField(max_length=50, primary_key=True)
     name = CharField(max_length=100, null=True, default='')
     task = CharField(max_length=50, index=True)
@@ -71,4 +71,4 @@ class Job(DataBaseModel):
     elapsed = BigIntegerField(null=True)
 
     class Meta:
-        db_table = "job"
+        db_table = "job_info"

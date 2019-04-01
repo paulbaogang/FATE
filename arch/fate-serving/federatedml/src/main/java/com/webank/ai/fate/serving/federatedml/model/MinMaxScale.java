@@ -1,25 +1,25 @@
-package com.webank.ai.fate.serving.federatedml.transform;
+package com.webank.ai.fate.serving.federatedml.model;
 
-import com.webank.ai.fate.core.mlmodel.buffer.DataTransformServerProto.Scale;
+import com.webank.ai.fate.core.mlmodel.buffer.ScaleParamProto.MinMaxScaleParam;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class MinMaxScale {
     private static final Logger LOGGER = LogManager.getLogger();
-    public HashMap<String, Object> fit(HashMap<String, Object> inputData, Map<String, Scale> scales) {
+
+    public Map<String, Object> transform(Map<String, Object> inputData, Map<String, MinMaxScaleParam> scales) {
         for (String key : inputData.keySet()) {
             try {
-                Scale scale = scales.get(key);
-                float value = (float) inputData.get(key);
+                MinMaxScaleParam scale = scales.get(key);
+                double value = (double) inputData.get(key);
                 if (value > scale.getFeatUpper())
                     value = 1;
                 else if (value < scale.getFeatLower())
                     value = 0;
                 else {
-                    float range = scale.getFeatUpper() - scale.getFeatLower();
+                    double range = scale.getFeatUpper() - scale.getFeatLower();
                     if (range <= 0) {
                         value = 0;
                     } else {
@@ -27,8 +27,9 @@ public class MinMaxScale {
                     }
                 }
 
-                float out_range = scale.getOutUpper() - scale.getFeatLower();
-                value = value * out_range + scale.getOutLower();
+                double outLower = scale.getOutLower();
+                double out_range = scale.getOutUpper() - outLower;
+                value = value * out_range + outLower;
                 inputData.put(key, value);
 
             } catch (Exception ex) {

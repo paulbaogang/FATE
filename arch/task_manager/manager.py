@@ -23,7 +23,8 @@ from psutil import NoSuchProcess
 import traceback
 import uuid
 from arch.task_manager.settings import ROLE, SERVERS, IP, GRPC_PORT, HTTP_PORT, LOCAL_URL, PROXY_HOST, PROXY_PORT, \
-    PARTY_ID, WORK_MODE, HEADERS, _ONE_DAY_IN_SECONDS
+    PARTY_ID, WORK_MODE, HEADERS, _ONE_DAY_IN_SECONDS, server_conf
+from arch.task_manager.utils import publish_model
 
 '''
 Initialize the manager
@@ -190,9 +191,7 @@ def start_workflow(job_id, module, role):
     else:
         startupinfo = None
     task_pid_path = os.path.join(_job_dir, 'pids')
-    #std_log = open(os.path.join(_job_dir, role + '.std.log'), 'w')
-    # jarvis test
-    std_log = open(os.path.join("/Users/jarviszeng/Work/Project/FDN/FATE/jobs", role + '.std.log'), 'w')
+    std_log = open(os.path.join(_job_dir, role + '.std.log'), 'w')
 
     progs = ["python3",
              os.path.join(file_utils.get_project_base_directory(), _data['CodePath']),
@@ -337,9 +336,60 @@ def import_offline_feature():
         else:
             return get_json_result(status=1, msg="request offline feature error: %s" % response.get("msg", ""))
     except Exception as e:
-        traceback.print_exc()
         manager.logger.exception(e)
         return get_json_result(status=1, msg="request offline feature error: %s" % e)
+
+
+@manager.route('/v1/publish/loadmodel', methods=['POST'])
+def load_model():
+    config = file_utils.load_json_conf(request.json.get("config_path"))
+    _job_id = generate_job_id()
+    channel, stub = get_proxy_data_channel()
+    for _party_id in config.get("party_ids"):
+        config['my_party_id'] = _party_id
+        _method = 'POST'
+        _url = '/v1/publish/doloadmodel'
+        _packet = wrap_grpc_packet(config, _method, _url, _party_id, _job_id)
+        print('Starting load model job_id:{} party_id:{} method:{} url:{}'.format(_job_id, _party_id,_method, _url))
+        manager.logger.info(
+            'Starting load model job_id:{} party_id:{} method:{} url:{}'.format(_job_id, _party_id,_method, _url))
+        try:
+            _return = stub.unaryCall(_packet)
+            manager.logger.info("Grpc unary response: {}".format(_return))
+        except grpc.RpcError as e:
+            msg = 'job_id:{} party_id:{} method:{} url:{} Failed to start load model'.format(_job_id,
+                                                                                             _party_id,
+                                                                                             _method,
+                                                                                             _url)
+            manager.logger.exception(msg)
+            return get_json_result(-101, 'UnaryCall submit to remote manager failed')
+
+
+@manager.route('/v1/publish/doloadmodel', methods=['POST'])
+def do_load_model():
+    request_data = request.json
+    try:
+        request_data["servings"] = server_conf.get("servers", {}).get("servings", [])
+        print(request_data)
+        publish_model.load_model(config_data=request_data)
+        return get_json_result()
+    except Exception as e:
+        traceback.print_exc()
+        manager.logger.exception(e)
+        return get_json_result(status=1, msg="load model error: %s" % e)
+
+
+@manager.route('/v1/publish/publishmodelonline', methods=['POST'])
+def publish_model_online():
+    request_data = request.json
+    try:
+        config = file_utils.load_json_conf(request_data.get("config_path"))
+        publish_model.publish_model_online(config_data=config)
+        return get_json_result()
+    except Exception as e:
+        manager.logger.exception(e)
+        return get_json_result(status=1, msg="load model error: %s" % e)
+
 
 
 def wrap_grpc_packet(_json_body, _method, _url, _dst_party_id=None, job_id=None):

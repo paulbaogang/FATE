@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package com.webank.ai.fate.core.mlmodel.model;
-
-
+package com.webank.ai.fate.serving.federatedml;
+import java.util.HashMap;
 import java.util.Map;
+
 import com.google.protobuf.ByteString;
 import com.webank.ai.fate.api.networking.proxy.Proxy;
 import com.webank.ai.fate.core.network.grpc.client.ClientPool;
@@ -27,46 +27,41 @@ import com.webank.ai.fate.core.utils.ObjectTransform;
 import io.grpc.ManagedChannel;
 import com.webank.ai.fate.api.networking.proxy.Proxy.Packet;
 import com.webank.ai.fate.api.networking.proxy.DataTransferServiceGrpc;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-public abstract class MachineLearningModel<B, X, P> implements MLModel<B, X, P>{
-    private Map<String, String> modelInfo;
+public class PipelineTask{
+    private static final Logger LOGGER = LogManager.getLogger();
 
-    @Override
-    public void setModelInfo(Map<String, String> modelInfo) {
-        this.modelInfo = modelInfo;
+    public int initModel(Map<String, byte[]> modelProtoMap){
+        return 0;
     }
 
-    @Override
-    public Map<String, String> getModelInfo() {
-        return this.modelInfo;
+    public Map<String, Object> predict(Map<String, Object> inputData, Map<String, Object> predictParams){
+        Map<String, Object> result = new HashMap<>();
+        result.put("r1", "xxx");
+        Map<String, Object> hostResponse = getFederatedPredict(predictParams);
+        LOGGER.info(hostResponse);
+        return result;
     }
 
-    @Override
-    public abstract int initModel(B modelBuffer);
-
-    @Override
-    public abstract Map<String, Object> predict(X inputData, P predictParams);
 
     protected Map<String, Object> getFederatedPredict(Map<String, Object> requestData){
         Packet.Builder packetBuilder = Packet.newBuilder();
-        requestData.putAll(this.modelInfo);
-        requestData.put("myPartyId", Configuration.getProperty("partyId"));
-        requestData.put("modelName", requestData.get("partnerModelName"));
-        requestData.put("modelNamespace", requestData.get("partnerModelNamespace"));
         packetBuilder.setBody(Proxy.Data.newBuilder()
-                        .setValue(ByteString.copyFrom(ObjectTransform.bean2Json(requestData).getBytes()))
-                        .build());
+                .setValue(ByteString.copyFrom(ObjectTransform.bean2Json(requestData).getBytes()))
+                .build());
 
         Proxy.Metadata.Builder metaDataBuilder = Proxy.Metadata.newBuilder();
         Proxy.Topic.Builder topicBuilder = Proxy.Topic.newBuilder();
 
         metaDataBuilder.setSrc(
                 topicBuilder.setPartyId(Configuration.getProperty("partyId")).
-                        setRole(this.modelInfo.get("myRole"))
+                        setRole("guest")
                         .setName("partyName")
                         .build());
         metaDataBuilder.setDst(
-                topicBuilder.setPartyId(this.modelInfo.get("partnerPartyId"))
+                topicBuilder.setPartyId(requestData.get("partnerPartyId").toString())
                         .setRole("host")
                         .setName("partnerPartyName")
                         .build());

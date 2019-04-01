@@ -16,51 +16,75 @@
 
 package com.webank.ai.fate.serving.manger;
 
-import com.webank.ai.fate.core.mlmodel.model.MLModel;
+import com.webank.ai.fate.api.mlmodel.manager.ModelServiceProto;
 import com.webank.ai.fate.core.result.ReturnResult;
 import com.webank.ai.fate.core.constant.StatusCode;
+import com.webank.ai.fate.core.utils.Configuration;
+import com.webank.ai.fate.serving.federatedml.PipelineTask;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ModelManager {
-    private static ModelPool sceneModel;
+    private static ModelPool namespaceModel;
     private static ModelCache modelCache;
+    private static ConcurrentHashMap<String, ModelInfo> partnerModelIndex;
     private static final Logger LOGGER = LogManager.getLogger();
     public ModelManager(){
-        sceneModel = new ModelPool();
+        namespaceModel = new ModelPool();
         modelCache = new ModelCache();
+        partnerModelIndex = new ConcurrentHashMap<>();
     }
 
-    public static MLModel getModel(String sceneId, String partnerPartyId, String myRole){
-        return sceneModel.get(ModelUtils.getSceneModelKey(sceneId, partnerPartyId, myRole));
-    }
-
-    public static MLModel getModel(String name, String namespace){
+    public static PipelineTask getModel(String name, String namespace){
         return modelCache.get(ModelUtils.genModelKey(name, namespace));
     }
 
-    private static int pushModelIntoPool(String name, String namespace) throws Exception{
-        MLModel mlModel = ModelUtils.loadModel(name, namespace);
-        if (mlModel == null){
-            return StatusCode.NOMODEL;
+    public static PipelineTask getModelAcPartner(int partnerPartyId, String partnerModelName, String partnerModelNamespace){
+        ModelInfo modelInfo = partnerModelIndex.get(ModelUtils.genPartnerModelIndexKey(partnerPartyId, partnerModelName, partnerModelNamespace));
+        LOGGER.info(ModelUtils.genPartnerModelIndexKey(partnerPartyId, partnerModelName, partnerModelNamespace));
+        if (modelInfo == null){
+            return null;
         }
-        modelCache.put(ModelUtils.genModelKey(name, namespace), mlModel);
-        return StatusCode.OK;
+        return modelCache.get(ModelUtils.genModelKey(modelInfo.getName(), modelInfo.getNamespace()));
     }
 
-    public static ReturnResult publishLoadModel(String name, String namespace){
+    private static PipelineTask pushModelIntoPool(String name, String namespace) throws Exception{
+        PipelineTask model = ModelUtils.loadModel(name, namespace);
+        if (model == null){
+            return null;
+        }
+        modelCache.put(ModelUtils.genModelKey(name, namespace), model);
+        LOGGER.info(modelCache.getSize());
+        return model;
+    }
+
+    public static ReturnResult publishLoadModel(Map<Integer, ModelServiceProto.ModelInfo> models){
         ReturnResult returnResult = new ReturnResult();
         returnResult.setStatusCode(StatusCode.OK);
-        returnResult.setData("name", name);
-        returnResult.setData("namespace", namespace);
         try{
-            int localLoadStatus = pushModelIntoPool(name, namespace);
-            if (localLoadStatus != StatusCode.OK){
-                returnResult.setStatusCode(localLoadStatus);
+            int partyId = Configuration.getPropertyInt("partyId");
+            ModelServiceProto.ModelInfo myModelInfo = models.get(partyId);
+            if (myModelInfo == null){
+                returnResult.setStatusCode(StatusCode.NOMODEL);
                 return returnResult;
             }
+            String myModelName = myModelInfo.getName();
+            String myModelNamespace = myModelInfo.getNamespace();
+            PipelineTask model = pushModelIntoPool(myModelName, myModelNamespace);
+            if (model == null){
+                returnResult.setStatusCode(StatusCode.RUNTIMEERROR);
+                return returnResult;
+            }
+            models.forEach((p, m)->{
+                if (p != partyId){
+                    LOGGER.info(ModelUtils.genPartnerModelIndexKey(p, m.getName(), m.getNamespace()));
+                    partnerModelIndex.put(ModelUtils.genPartnerModelIndexKey(p, m.getName(), m.getNamespace()), new ModelInfo(myModelName, myModelNamespace));
+                }
+            });
         }
         catch (IOException ex){
             LOGGER.error(ex);
@@ -83,7 +107,7 @@ public class ModelManager {
             String namespace = String.valueOf(requestData.get("modelNamespace"));
             returnResult.setData("name", name);
             returnResult.setData("namespace", namespace);
-            returnResult.setStatusCode(pushModelIntoPool(name, namespace));
+            //returnResult.setStatusCode(pushModelIntoPool(name, namespace));
         }
         catch (Exception ex){
             returnResult.setStatusCode(StatusCode.UNKNOWNERROR);
@@ -92,16 +116,22 @@ public class ModelManager {
         return returnResult;
     }
 
-    public static ReturnResult publishOnlineModel(String sceneId, String myRole, String partnerPartyId, String name, String namespace){
+    public static ReturnResult publishOnlineModel(Map<Integer, ModelServiceProto.ModelInfo> models){
         ReturnResult returnResult = new ReturnResult();
-        MLModel model = modelCache.get(ModelUtils.genModelKey(name, namespace));
+        ModelServiceProto.ModelInfo myModelInfo = models.get(Configuration.getPropertyInt("partyId"));
+        if (myModelInfo == null){
+            returnResult.setStatusCode(StatusCode.NOMODEL);
+            returnResult.setMessage("No model for me.");
+            return returnResult;
+        }
+        PipelineTask model = modelCache.get(ModelUtils.genModelKey(myModelInfo.getName(), myModelInfo.getNamespace()));
         if (model == null){
             returnResult.setStatusCode(StatusCode.NOMODEL);
             returnResult.setMessage("Can not found model by these information.");
             return returnResult;
         }
         try{
-            sceneModel.put(ModelUtils.getSceneModelKey(sceneId, myRole, partnerPartyId), model);
+            namespaceModel.put(myModelInfo.getNamespace(), model);
             returnResult.setStatusCode(StatusCode.OK);
         }
         catch (Exception ex){

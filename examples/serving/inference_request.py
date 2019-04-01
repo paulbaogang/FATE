@@ -23,10 +23,13 @@ def run():
 def send(channel):
     stub = inference_service_pb2_grpc.InferenceServiceStub(channel)
     request = inference_service_pb2.InferenceRequest()
-    request.meta.sceneId = '50000'
-    request.meta.myPartyId = '10000'
-    request.meta.partnerPartyId = "9999"
-    request.meta.myRole = 'guestUser'
+    request.meta.sceneId = 50000
+    request.meta.myPartyId = 10000
+    request.meta.partnerPartyId = 9999
+    request.meta.myRole = 'guest'
+
+    request.model.name = "hetero_lr_guest_model_hetero_logistic_regression_example_standalone_20190322185246"
+    request.model.namespace = "hetero_lr"
 
     data = {}
     data["123456"] = {}
@@ -37,11 +40,6 @@ def send(channel):
     request.data = json.dumps(data).encode(encoding="utf-8")
     response = stub.predict(request)
     print(response)
-    #print("%d Client received: %s" % (threading.currentThread().ident, request.msg))
-    """
-    for request in stub.GetListMsg(msg_pb2.MsgRequest(name='world', id=5)):
-        print("%d Client received: %s" % (threading.currentThread().ident, request.msg))
-    """
 
 
 if __name__ == '__main__':

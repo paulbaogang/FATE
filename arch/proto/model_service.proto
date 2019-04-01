@@ -9,12 +9,8 @@ message ModelInfo{
 }
 
 message PublishRequest{
-    string sceneId = 1;
-    string myRole = 2;
-    string myPartyId = 3;
-    string partnerPartyId = 4;
-    string modelName = 5;
-    string modelNamespace = 6;
+    int32 myPartyId = 1;
+    map<int32, ModelInfo> models = 2;
 }
 
 message PublishResponse{

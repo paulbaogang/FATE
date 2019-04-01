@@ -16,53 +16,36 @@
 
 package com.webank.ai.fate.serving.manger;
 
-import com.webank.ai.fate.core.constant.StatusCode;
-import com.webank.ai.fate.core.mlmodel.buffer.ProtoModelBuffer;
-import com.webank.ai.fate.core.mlmodel.model.MLModel;
 import com.webank.ai.fate.core.storage.dtable.DTable;
 import com.webank.ai.fate.core.storage.dtable.DTableFactory;
-import org.apache.commons.lang3.ArrayUtils;
+import com.webank.ai.fate.serving.federatedml.PipelineTask;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 
 public class ModelUtils {
-    private static String modelPackage = "com.webank.ai.fate.serving.federatedml.model";
-
-    public static ProtoModelBuffer readModel(String name, String namespace){
-        //DTable dataTable = VersionControl.dTableForRead("model_data", sceneId, partnerPartyId, myRole, commitId, tag, branch);
+    public static Map<String, byte[]> readModel(String name, String namespace){
         DTable dataTable = DTableFactory.getDTable(name, namespace, 1);
-        ProtoModelBuffer modelBuffer = new ProtoModelBuffer();
-        if (modelBuffer.deserialize(dataTable.get("model_meta"), dataTable.get("model_param"), dataTable.get("data_transform")) == StatusCode.OK){
-            return modelBuffer;
-        }
-        else{
-            return null;
-        }
+        return dataTable.collect();
     }
 
-
-    public static MLModel loadModel(String name, String namespace) throws Exception{
-        ProtoModelBuffer modelBuffer = readModel(name, namespace);
-        if (modelBuffer == null){
+    public static PipelineTask loadModel(String name, String namespace){
+        Map<String, byte[]> modelBytes = readModel(name, namespace);
+        if (modelBytes == null){
             return null;
         }
-        Class modelClass = Class.forName(modelPackage + "." + modelBuffer.getMeta().getName());
-        MLModel mlModel = (MLModel)modelClass.getConstructor().newInstance();
-        Map<String, String> modelInfo = new HashMap<>();
-        mlModel.setModelInfo(modelInfo);
-        mlModel.initModel(modelBuffer);
-        return mlModel;
-    }
-
-    public static String getSceneModelKey(String sceneId, String myRole, String partnerPartyId){
-        return StringUtils.join(Arrays.asList(sceneId, myRole, partnerPartyId), "-");
+        PipelineTask pipelineTask = new PipelineTask();
+        pipelineTask.initModel(modelBytes);
+        return pipelineTask;
     }
 
     public static String genModelKey(String name, String namespace){
-        return StringUtils.join(Arrays.asList(name, namespace), "-");
+        return StringUtils.join(Arrays.asList(name, namespace), "_");
+    }
+
+    public static String genPartnerModelIndexKey(int partnerPartyId, String partnerModelName, String partnerModelNamespace){
+        return StringUtils.join(Arrays.asList(partnerPartyId, partnerModelName, partnerModelNamespace), "_");
     }
 
     public static String[] splitModelKey(String key){

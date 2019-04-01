@@ -14,12 +14,21 @@
  * limitations under the License.
  */
 
-package com.webank.ai.fate.core.storage.dtable;
+package com.webank.ai.fate.serving.manger;
 
-import java.util.Map;
+public class ModelInfo {
+    private String name;
+    private String namespace;
+    public ModelInfo(String name, String namespace){
+        this.name = name;
+        this.namespace = namespace;
+    }
 
-public interface DTable {
-    byte[] get(String key);
-    void put(String key, byte[] value);
-    Map<String, byte[]> collect();
+    public String getName() {
+        return name;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
 }

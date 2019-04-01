@@ -167,7 +167,6 @@ def submit_job():
                                                                                                    _url)
             manager.logger.exception(msg)
             return get_json_result(-101, 'UnaryCall submit to remote manager failed')
-    #save_job_info(job_id=_job_id, )
     return get_json_result(0, "success, job_id {}".format(_job_id))
 
 
@@ -214,6 +213,13 @@ def start_workflow(job_id, module, role):
         f.write(str(p.pid) + "\n")
         f.flush()
 
+    job_data = dict()
+    job_data["begin_date"] = datetime.datetime.now()
+    job_data["status"] = "running"
+    with open(conf_file_path) as fr:
+        config = json.load(fr)
+    job_data.update(config)
+    save_job_info(job_id=job_id, **job_data)
     return get_json_result(msg="success, pip is %d" % p.pid)
 
 
@@ -250,8 +256,8 @@ def stop_workflow(job_id):
 def update_job(job_id):
     request_data = request.json
     update_job_info(job_id=job_id, update_data={"status": request_data.get("status")})
-    #if request_data.get("status") in ["failed", "deleted"]:
-
+    if request_data.get("status") in ["failed", "deleted"]:
+        stop_workflow(job_id=job_id)
     return get_json_result()
 
 

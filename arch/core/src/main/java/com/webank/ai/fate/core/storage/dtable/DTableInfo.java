@@ -14,13 +14,21 @@
  * limitations under the License.
  */
 
-package com.webank.ai.fate.core.mlmodel.model;
+package com.webank.ai.fate.core.storage.dtable;
 
-import java.util.Map;
+public class DTableInfo {
+    private String name;
+    private String namespace;
+    public DTableInfo(String name, String namespace){
+        this.name = name;
+        this.namespace = namespace;
+    }
 
-public interface MLModel<B, X, P> {
-    void setModelInfo(Map<String, String> modelInfo);
-    Map<String, String> getModelInfo();
-    int initModel(B modelBuffer);
-    Map<String, Object> predict(X inputData, P predictParams);
+    public String getName() {
+        return name;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
 }

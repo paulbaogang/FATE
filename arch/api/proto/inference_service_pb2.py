@@ -27,6 +27,7 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
+import model_service_pb2 as model__service__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(
@@ -34,8 +35,9 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='com.webank.ai.fate.api.serving',
   syntax='proto3',
   serialized_options=_b('B\025InferenceServiceProto'),
-  serialized_pb=_b('\n\x17inference_service.proto\x12\x1e\x63om.webank.ai.fate.api.serving\"m\n\rFederatedMeta\x12\x0f\n\x07sceneId\x18\x01 \x01(\t\x12\x11\n\tmyPartyId\x18\x02 \x01(\t\x12\x16\n\x0epartnerPartyId\x18\x03 \x01(\t\x12\x0e\n\x06myRole\x18\x04 \x01(\t\x12\x10\n\x08\x63ommitId\x18\x05 \x01(\t\"]\n\x10InferenceRequest\x12;\n\x04meta\x18\x01 \x01(\x0b\x32-.com.webank.ai.fate.api.serving.FederatedMeta\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\x0c\"\x92\x01\n\x11InferenceResponse\x12;\n\x04meta\x18\x01 \x01(\x0b\x32-.com.webank.ai.fate.api.serving.FederatedMeta\x12\x12\n\nstatusCode\x18\x02 \x01(\x05\x12\x0f\n\x07message\x18\x03 \x01(\t\x12\r\n\x05\x65rror\x18\x04 \x01(\t\x12\x0c\n\x04\x64\x61ta\x18\x05 \x01(\x0c\x32\x82\x01\n\x10InferenceService\x12n\n\x07predict\x12\x30.com.webank.ai.fate.api.serving.InferenceRequest\x1a\x31.com.webank.ai.fate.api.serving.InferenceResponseB\x17\x42\x15InferenceServiceProtob\x06proto3')
-)
+  serialized_pb=_b('\n\x17inference_service.proto\x12\x1e\x63om.webank.ai.fate.api.serving\x1a\x13model_service.proto\"[\n\rFederatedMeta\x12\x0f\n\x07sceneId\x18\x01 \x01(\x05\x12\x11\n\tmyPartyId\x18\x02 \x01(\x05\x12\x16\n\x0epartnerPartyId\x18\x03 \x01(\x05\x12\x0e\n\x06myRole\x18\x04 \x01(\t\"\x9f\x01\n\x10InferenceRequest\x12;\n\x04meta\x18\x01 \x01(\x0b\x32-.com.webank.ai.fate.api.serving.FederatedMeta\x12@\n\x05model\x18\x02 \x01(\x0b\x32\x31.com.webank.ai.fate.api.mlmodel.manager.ModelInfo\x12\x0c\n\x04\x64\x61ta\x18\x03 \x01(\x0c\"\x92\x01\n\x11InferenceResponse\x12;\n\x04meta\x18\x01 \x01(\x0b\x32-.com.webank.ai.fate.api.serving.FederatedMeta\x12\x12\n\nstatusCode\x18\x02 \x01(\x05\x12\x0f\n\x07message\x18\x03 \x01(\t\x12\r\n\x05\x65rror\x18\x04 \x01(\t\x12\x0c\n\x04\x64\x61ta\x18\x05 \x01(\x0c\x32\x82\x01\n\x10InferenceService\x12n\n\x07predict\x12\x30.com.webank.ai.fate.api.serving.InferenceRequest\x1a\x31.com.webank.ai.fate.api.serving.InferenceResponseB\x17\x42\x15InferenceServiceProtob\x06proto3')
+  ,
+  dependencies=[model__service__pb2.DESCRIPTOR,])
 
 
 
@@ -49,35 +51,28 @@ _FEDERATEDMETA = _descriptor.Descriptor(
   fields=[
     _descriptor.FieldDescriptor(
       name='sceneId', full_name='com.webank.ai.fate.api.serving.FederatedMeta.sceneId', index=0,
-      number=1, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
+      number=1, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
       name='myPartyId', full_name='com.webank.ai.fate.api.serving.FederatedMeta.myPartyId', index=1,
-      number=2, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
+      number=2, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
       name='partnerPartyId', full_name='com.webank.ai.fate.api.serving.FederatedMeta.partnerPartyId', index=2,
-      number=3, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
+      number=3, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
       name='myRole', full_name='com.webank.ai.fate.api.serving.FederatedMeta.myRole', index=3,
       number=4, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='commitId', full_name='com.webank.ai.fate.api.serving.FederatedMeta.commitId', index=4,
-      number=5, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -94,8 +89,8 @@ _FEDERATEDMETA = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=59,
-  serialized_end=168,
+  serialized_start=80,
+  serialized_end=171,
 )
 
 
@@ -114,8 +109,15 @@ _INFERENCEREQUEST = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='data', full_name='com.webank.ai.fate.api.serving.InferenceRequest.data', index=1,
-      number=2, type=12, cpp_type=9, label=1,
+      name='model', full_name='com.webank.ai.fate.api.serving.InferenceRequest.model', index=1,
+      number=2, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='data', full_name='com.webank.ai.fate.api.serving.InferenceRequest.data', index=2,
+      number=3, type=12, cpp_type=9, label=1,
       has_default_value=False, default_value=_b(""),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -132,8 +134,8 @@ _INFERENCEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=170,
-  serialized_end=263,
+  serialized_start=174,
+  serialized_end=333,
 )
 
 
@@ -191,11 +193,12 @@ _INFERENCERESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=266,
-  serialized_end=412,
+  serialized_start=336,
+  serialized_end=482,
 )
 
 _INFERENCEREQUEST.fields_by_name['meta'].message_type = _FEDERATEDMETA
+_INFERENCEREQUEST.fields_by_name['model'].message_type = model__service__pb2._MODELINFO
 _INFERENCERESPONSE.fields_by_name['meta'].message_type = _FEDERATEDMETA
 DESCRIPTOR.message_types_by_name['FederatedMeta'] = _FEDERATEDMETA
 DESCRIPTOR.message_types_by_name['InferenceRequest'] = _INFERENCEREQUEST
@@ -232,8 +235,8 @@ _INFERENCESERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=415,
-  serialized_end=545,
+  serialized_start=485,
+  serialized_end=615,
   methods=[
   _descriptor.MethodDescriptor(
     name='predict',

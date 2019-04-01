@@ -21,15 +21,16 @@ import com.webank.ai.fate.api.serving.InferenceServiceGrpc;
 import com.webank.ai.fate.api.serving.InferenceServiceProto.InferenceRequest;
 import com.webank.ai.fate.api.serving.InferenceServiceProto.InferenceResponse;
 import com.webank.ai.fate.api.serving.InferenceServiceProto.FederatedMeta;
-import com.webank.ai.fate.api.serving.InferenceServiceProto.ModelInfo;
 import com.webank.ai.fate.core.result.ReturnResult;
+import com.webank.ai.fate.core.storage.dtable.DTableInfo;
 import com.webank.ai.fate.core.utils.Configuration;
 import com.webank.ai.fate.core.utils.ObjectTransform;
 import com.webank.ai.fate.serving.adapter.dataaccess.FeatureData;
 import com.webank.ai.fate.serving.adapter.resultprocessing.ResultData;
+import com.webank.ai.fate.serving.federatedml.PipelineTask;
 import com.webank.ai.fate.serving.manger.ModelManager;
-import com.webank.ai.fate.core.mlmodel.model.MLModel;
 import com.webank.ai.fate.core.constant.StatusCode;
+import com.webank.ai.fate.serving.utils.DTableUtils;
 import com.webank.ai.fate.serving.utils.FederatedUtils;
 import io.grpc.stub.StreamObserver;
 import org.apache.logging.log4j.LogManager;
@@ -38,7 +39,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 
-public class PredictService extends InferenceServiceGrpc.InferenceServiceImplBase {
+public class InferenceService extends InferenceServiceGrpc.InferenceServiceImplBase {
     private static final Logger LOGGER = LogManager.getLogger();
 
     @Override
@@ -46,11 +47,21 @@ public class PredictService extends InferenceServiceGrpc.InferenceServiceImplBas
         FederatedMeta requestMeta = req.getMeta();
 
         InferenceResponse.Builder response = InferenceResponse.newBuilder();
-        String myRole = FederatedUtils.getMyRole(requestMeta.getMyRole());
-
         // get model
-        ModelInfo modelInfo = req.getModelsMap().get(Configuration.getProperty("partyId"));
-        MLModel model = ModelManager.getModel(modelInfo.getName(), modelInfo.getNamespace());
+        String myModelName, myModelNamespace;
+        if (req.getModel() != null){
+            myModelName = req.getModel().getName();
+            myModelNamespace = req.getModel().getNamespace();
+        }else{
+            DTableInfo modelDTableInfo = DTableUtils.genTableInfo(req.getMeta().getSceneId(),
+                    req.getMeta().getMyRole(),
+                    req.getMeta().getMyPartyId(),
+                    req.getMeta().getPartnerPartyId(),
+                    "model_data");
+            myModelName = modelDTableInfo.getName();
+            myModelNamespace = modelDTableInfo.getNamespace();
+        }
+        PipelineTask model = ModelManager.getModel(myModelName, myModelNamespace);
         if (model == null){
             response.setStatusCode(StatusCode.NOMODEL);
             FederatedMeta.Builder federatedMetaBuilder = FederatedUtils.genResponseMetaBuilder(requestMeta);
@@ -76,12 +87,12 @@ public class PredictService extends InferenceServiceGrpc.InferenceServiceImplBas
         Map<String, Object> inputData = (Map<String, Object>) inputObject;
         inputData.forEach((sid, f)->{
             Map<String, Object> predictInputData = (Map<String, Object>)f;
-            Map<String, String> predictParams = new HashMap<>();
-            ModelInfo partnerModelInfo = req.getModelsMap().get(req.getMeta().getPartnerPartyId());
-            predictParams.put("sceneId", requestMeta.getSceneId());
+            Map<String, Object> predictParams = new HashMap<>();
             predictParams.put("sid", sid);
-            predictParams.put("partnerModelName", partnerModelInfo.getName());
-            predictParams.put("partnerModelNamespace", partnerModelInfo.getNamespace());
+            predictParams.put("modelName", myModelName);
+            predictParams.put("modelNamespace", myModelNamespace);
+            predictParams.put("partyId", Configuration.getPropertyInt("partyId"));
+            predictParams.put("partnerPartyId", requestMeta.getPartnerPartyId());
             Map<String, Object> modelResult = model.predict(predictInputData, predictParams);
             Map<String, Object> result = this.getProcessedResult(modelResult);
             response.setData(ByteString.copyFrom(ObjectTransform.bean2Json(result).getBytes()));
@@ -92,17 +103,13 @@ public class PredictService extends InferenceServiceGrpc.InferenceServiceImplBas
     }
 
     public ReturnResult federatedPredict(Map<String, Object> requestData){
-        ReturnResult returnResult = new ReturnResult();
-        /*
-        String myPartyId = Configuration.getProperty("partyId");
-        String partnerPartyId = requestData.get("myPartyId").toString();
-        String myRole = FederatedUtils.getMyRole(requestData.get("myRole").toString());
-        */
         LOGGER.info(requestData);
-        String modelName = requestData.get("modelName").toString();
-        String modelNamespace = requestData.get("modelNamespace").toString();
-        MLModel model = ModelManager.getModel(modelName, modelNamespace);
-        LOGGER.info(model);
+        ReturnResult returnResult = new ReturnResult();
+        int partnerPartyId = (int)requestData.get("partyId");
+        String partnerModelName = requestData.get("modelName").toString();
+        String partnerModelNamespace = requestData.get("modelNamespace").toString();
+        LOGGER.info(requestData);
+        PipelineTask model = ModelManager.getModelAcPartner(partnerPartyId, partnerModelName, partnerModelNamespace);
         if (model == null){
             returnResult.setStatusCode(StatusCode.NOMODEL);
             returnResult.setMessage("Can not found model.");
@@ -122,11 +129,13 @@ public class PredictService extends InferenceServiceGrpc.InferenceServiceImplBas
             returnResult.putAllData(result);
         }
         catch (Exception ex){
+            LOGGER.info("xczczczcz");
             returnResult.setStatusCode(StatusCode.FEDERATEDERROR);
             returnResult.setMessage(ex.getMessage());
         }
         return returnResult;
     }
+
 
     public Object getClassByName(String classPath){
         try{

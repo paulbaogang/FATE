@@ -3,6 +3,8 @@ package com.webank.ai.fate.serving.federatedml.model;
 import com.webank.ai.fate.core.constant.StatusCode;
 import com.webank.ai.fate.core.mlmodel.buffer.ScaleMetaProto.ScaleMeta;
 import com.webank.ai.fate.core.mlmodel.buffer.ScaleParamProto.ScaleParam;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.Map;
 
@@ -10,9 +12,11 @@ public class Scaler extends BaseModel {
     private ScaleMeta scaleMeta;
     private ScaleParam scaleParam;
     private boolean isScale;
+    private static final Logger LOGGER = LogManager.getLogger();
 
     @Override
     public int initModel(byte[] protoMeta, byte[] protoParam) {
+        LOGGER.info("start init Scale class");
         try {
             this.scaleMeta = ScaleMeta.parseFrom(protoMeta);
             this.scaleParam = ScaleParam.parseFrom(protoParam);
@@ -22,6 +26,7 @@ public class Scaler extends BaseModel {
             ex.printStackTrace();
             return StatusCode.ILLEGALDATA;
         }
+        LOGGER.info("init Scale class success");
         return StatusCode.OK;
     }
 

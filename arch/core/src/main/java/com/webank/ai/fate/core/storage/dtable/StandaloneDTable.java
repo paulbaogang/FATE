@@ -52,7 +52,7 @@ public class StandaloneDTable implements DTable{
     public Map<String, byte[]> collect(){
         Map<String, byte[]> kvData = new HashMap<>();
         for(Entry next: db.iterate(this.env.createReadTransaction()).iterable()){
-            kvData.put(next.getKey().toString(), next.getValue());
+            kvData.put(new String(next.getKey()), next.getValue());
         }
         return kvData;
     }

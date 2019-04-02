@@ -14,7 +14,7 @@ public class HeteroLRHost extends HeteroLR {
         LOGGER.info("input_data:{}",inputData);
 
         HashMap<String, Object> result = new HashMap<>();
-        float score = forward(inputData);
+        double score = forward(inputData);
         result.put("score", score);
 
         return result;

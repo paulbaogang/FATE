@@ -10,14 +10,14 @@ import static java.lang.Math.exp;
 
 public class HeteroLRGuest extends HeteroLR {
     private static final Logger LOGGER = LogManager.getLogger();
-    private double sigmod(float x) {
+    private double sigmod(double x) {
         return 1. / (1. + exp(-x));
     }
 
     @Override
     public Map<String, Object> predict(Map<String, Object> inputData, Map<String, Object> predictParams){
-        HashMap<String, Object> result = new HashMap<>();
-        float score = forward(inputData);
+        Map<String, Object> result = new HashMap<>();
+        double score = forward(inputData);
         LOGGER.info("guest score:{}", score);
 
         try{
@@ -25,11 +25,12 @@ public class HeteroLRGuest extends HeteroLR {
             score += (double)hostPredictResponse.get("score");
         }
         catch (Exception ex){
+            ex.printStackTrace();
             LOGGER.error(ex);
         }
 
         double prob = sigmod(score);
-        result.put("prob", (float)prob);
+        result.put("prob", prob);
 
         return result;
     }

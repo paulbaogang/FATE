@@ -28,11 +28,11 @@ public abstract class HeteroLR extends BaseModel {
         return StatusCode.OK;
     }
 
-    float forward(Map<String, Object> inputData) {
-        float score = 0;
+    double forward(Map<String, Object> inputData) {
+        double score = 0;
         for (String key : inputData.keySet()) {
             if (this.weight.containsKey(key)) {
-                score += (float) inputData.get(key) * this.weight.get(key);
+                score += (double) inputData.get(key) * this.weight.get(key);
             }
         }
         score += this.intercept;

@@ -23,14 +23,15 @@ public class PipelineTask {
             }
             String pipelineProtoName = "Pipeline";
             LOGGER.info("Pipeline.getBytes:{}", pipelineProtoName.getBytes());
-            PipelineProto.Pipeline pipeLineProto = PipelineProto.Pipeline.parseFrom(modelProtoMap.get(pipelineProtoName.getBytes()));
+            PipelineProto.Pipeline pipeLineProto = PipelineProto.Pipeline.parseFrom(modelProtoMap.get(pipelineProtoName));
             List<String> pipeLineMeta = pipeLineProto.getNodeMetaList();
             List<String> pipeLineParam = pipeLineProto.getNodeParamList();
             LOGGER.info("end init Pipeline");
             for (int i = 0; i < pipeLineMeta.size(); i++) {
                 try {
                     LOGGER.info("start get class name");
-                    String className = pipeLineMeta.get(i).split(".")[0];
+                    LOGGER.info("class name:{}", pipeLineMeta.get(i));
+                    String className = pipeLineMeta.get(i).split("\\.")[0];
                     LOGGER.info("className:{}",className);
                     Class modelClass = Class.forName(this.modelPackage + "." + className);
                     BaseModel mlNode = (BaseModel) modelClass.getConstructor().newInstance();

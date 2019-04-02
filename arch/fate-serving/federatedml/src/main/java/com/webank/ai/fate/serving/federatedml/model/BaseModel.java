@@ -17,22 +17,8 @@ public abstract class BaseModel {
     // public abstract HashMap<String, Object> predict(HashMap<String, Object> inputData);
     public abstract Map<String, Object> predict(Map<String, Object> inputData, Map<String, Object> predictParams);
 
-    private Map<String, String> modelInfo;
-
-    public void setModelInfo(Map<String, String> modelInfo) {
-        this.modelInfo = modelInfo;
-    }
-
-    public Map<String, String> getModelInfo() {
-        return this.modelInfo;
-    }
-
     protected Map<String, Object> getFederatedPredict(Map<String, Object> requestData) {
         Proxy.Packet.Builder packetBuilder = Proxy.Packet.newBuilder();
-        requestData.putAll(this.modelInfo);
-        requestData.put("myPartyId", Configuration.getProperty("partyId"));
-        requestData.put("modelName", requestData.get("partnerModelName"));
-        requestData.put("modelNamespace", requestData.get("partnerModelNamespace"));
         packetBuilder.setBody(Proxy.Data.newBuilder()
                 .setValue(ByteString.copyFrom(ObjectTransform.bean2Json(requestData).getBytes()))
                 .build());
@@ -41,12 +27,12 @@ public abstract class BaseModel {
         Proxy.Topic.Builder topicBuilder = Proxy.Topic.newBuilder();
 
         metaDataBuilder.setSrc(
-                topicBuilder.setPartyId(Configuration.getProperty("partyId")).
-                        setRole(this.modelInfo.get("myRole"))
+                topicBuilder.setPartyId(requestData.get("partyId").toString()).
+                        setRole("guest")
                         .setName("partyName")
                         .build());
         metaDataBuilder.setDst(
-                topicBuilder.setPartyId(this.modelInfo.get("partnerPartyId"))
+                topicBuilder.setPartyId(requestData.get("partnerPartyId").toString())
                         .setRole("host")
                         .setName("partnerPartyName")
                         .build());

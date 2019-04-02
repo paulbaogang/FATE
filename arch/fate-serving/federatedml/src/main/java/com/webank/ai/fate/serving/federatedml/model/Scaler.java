@@ -26,7 +26,7 @@ public class Scaler extends BaseModel {
             ex.printStackTrace();
             return StatusCode.ILLEGALDATA;
         }
-        LOGGER.info("init Scale class success");
+        LOGGER.info("Finish init Scale class");
         return StatusCode.OK;
     }
 

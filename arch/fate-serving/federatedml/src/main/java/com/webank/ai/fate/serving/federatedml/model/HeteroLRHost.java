@@ -11,7 +11,6 @@ public class HeteroLRHost extends HeteroLR {
 
     @Override
     public Map<String, Object> predict(Map<String, Object> inputData, Map<String, Object> predictParams) {
-        LOGGER.info("input_data:{}",inputData);
 
         HashMap<String, Object> result = new HashMap<>();
         double score = forward(inputData);

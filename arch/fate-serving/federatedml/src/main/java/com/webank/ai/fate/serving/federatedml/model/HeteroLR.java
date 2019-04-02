@@ -24,7 +24,7 @@ public abstract class HeteroLR extends BaseModel {
             ex.printStackTrace();
             return StatusCode.ILLEGALDATA;
         }
-        LOGGER.info("init HeteroLR class success");
+        LOGGER.info("Finish init HeteroLR class");
         return StatusCode.OK;
     }
 

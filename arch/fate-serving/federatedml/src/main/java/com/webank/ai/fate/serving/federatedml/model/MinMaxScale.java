@@ -10,10 +10,11 @@ public class MinMaxScale {
     private static final Logger LOGGER = LogManager.getLogger();
 
     public Map<String, Object> transform(Map<String, Object> inputData, Map<String, MinMaxScaleParam> scales) {
+        LOGGER.info("Start MinMaxScale transform");
         for (String key : inputData.keySet()) {
             try {
                 MinMaxScaleParam scale = scales.get(key);
-                double value = (double) inputData.get(key);
+                double value = Double.parseDouble(inputData.get(key).toString());
                 if (value > scale.getFeatUpper())
                     value = 1;
                 else if (value < scale.getFeatLower())

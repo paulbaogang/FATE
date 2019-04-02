@@ -22,7 +22,9 @@ public class HeteroLRGuest extends HeteroLR {
 
         try{
             Map<String, Object> hostPredictResponse = this.getFederatedPredict(predictParams);
-            score += (double)hostPredictResponse.get("score");
+            double hostScore = (double)hostPredictResponse.get("score");
+            LOGGER.info("host score:{}", hostScore);
+            score += hostScore;
         }
         catch (Exception ex){
             ex.printStackTrace();
